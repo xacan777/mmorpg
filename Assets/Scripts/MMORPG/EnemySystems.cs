@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace MiniMMORPG
@@ -5,29 +6,28 @@ namespace MiniMMORPG
     public class EnemySpawner : MonoBehaviour
     {
         private Transform _player;
-        private float _spawnTimer;
-        private const int MaxEnemies = 12;
+
+        private const int InitialEnemies = 5;
+        private const float RespawnDelay = 5f;
 
         public void Initialize(Transform player)
         {
             _player = player;
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < InitialEnemies; i++)
             {
                 SpawnEnemy();
             }
         }
 
-        private void Update()
+        public void ScheduleRespawn()
         {
-            _spawnTimer -= Time.deltaTime;
-            if (_spawnTimer <= 0f)
-            {
-                _spawnTimer = 2.5f;
-                if (FindObjectsOfType<EnemyCharacter>().Length < MaxEnemies)
-                {
-                    SpawnEnemy();
-                }
-            }
+            StartCoroutine(RespawnRoutine());
+        }
+
+        private IEnumerator RespawnRoutine()
+        {
+            yield return new WaitForSeconds(RespawnDelay);
+            SpawnEnemy();
         }
 
         private void SpawnEnemy()
@@ -46,29 +46,35 @@ namespace MiniMMORPG
             rb.mass = 100f;
 
             var enemy = enemyObj.AddComponent<EnemyCharacter>();
-            enemy.Initialize(_player);
+            enemy.Initialize(_player, this);
         }
     }
 
     [RequireComponent(typeof(Rigidbody))]
     public class EnemyCharacter : MonoBehaviour
     {
+        public float MaxHealth { get; private set; }
+        public float Health { get; private set; }
+        public bool IsAlive => Health > 0f;
+
         private Transform _player;
         private Rigidbody _rb;
+        private EnemySpawner _spawner;
 
-        private float _health;
         private float _attackCooldown;
 
-        public void Initialize(Transform player)
+        public void Initialize(Transform player, EnemySpawner spawner)
         {
             _player = player;
+            _spawner = spawner;
             _rb = GetComponent<Rigidbody>();
-            _health = Random.Range(55f, 90f);
+            MaxHealth = Random.Range(70f, 100f);
+            Health = MaxHealth;
         }
 
         private void FixedUpdate()
         {
-            if (_player == null)
+            if (_player == null || !IsAlive)
             {
                 return;
             }
@@ -89,17 +95,41 @@ namespace MiniMMORPG
                 _attackCooldown -= Time.fixedDeltaTime;
                 if (_attackCooldown <= 0f)
                 {
-                    _attackCooldown = 1.2f;
+                    _attackCooldown = 1f;
                     var player = _player.GetComponent<PlayerCharacter>();
-                    player.ReceiveDamage(10f);
+                    player.ReceiveDamage(Random.Range(1f, 5.1f));
                 }
             }
         }
 
+        private void OnGUI()
+        {
+            if (!IsAlive || Camera.main == null)
+            {
+                return;
+            }
+
+            Vector3 screen = Camera.main.WorldToScreenPoint(transform.position + Vector3.up * 1.5f);
+            if (screen.z < 0f)
+            {
+                return;
+            }
+
+            float x = screen.x - 35f;
+            float y = Screen.height - screen.y;
+            GUI.Box(new Rect(x, y, 70f, 8f), GUIContent.none);
+            GUI.Box(new Rect(x, y, Mathf.Clamp(Health / MaxHealth, 0f, 1f) * 70f, 8f), GUIContent.none);
+        }
+
         public void TakeDamage(float damage)
         {
-            _health -= damage;
-            if (_health <= 0f)
+            if (!IsAlive)
+            {
+                return;
+            }
+
+            Health -= damage;
+            if (Health <= 0f)
             {
                 Die();
             }
@@ -109,8 +139,7 @@ namespace MiniMMORPG
         {
             var session = FindObjectOfType<GameSession>();
             int gold = Random.Range(3, 12);
-            int xp = Random.Range(12, 20);
-            session.AddKillReward(xp, gold);
+            session.AddKillReward(gold);
 
             int potionDropChance = Random.Range(0, 100);
             if (potionDropChance < 35)
@@ -119,6 +148,7 @@ namespace MiniMMORPG
             }
 
             LootPickup.Spawn(transform.position + new Vector3(0.4f, 0.25f, 0f), LootType.Gold, gold);
+            _spawner.ScheduleRespawn();
             Destroy(gameObject);
         }
     }

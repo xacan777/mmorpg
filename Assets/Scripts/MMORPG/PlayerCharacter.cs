@@ -12,6 +12,7 @@ namespace MiniMMORPG
 
         public float MaxHealth { get; private set; } = 100f;
         public float Health { get; private set; } = 100f;
+        public EnemyCharacter CurrentTarget { get; private set; }
 
         private CharacterController _controller;
         private GameSession _session;
@@ -19,7 +20,9 @@ namespace MiniMMORPG
 
         private const float Speed = 6.5f;
         private const float Gravity = -20f;
-        private const float AttackRange = 2.25f;
+        private const float AttackRange = 2.35f;
+        private const float AttackPeriod = 0.45f;
+        private const float AttackDamage = 15f;
 
         private float _verticalVelocity;
 
@@ -35,7 +38,8 @@ namespace MiniMMORPG
         private void Update()
         {
             HandleMovement();
-            HandleCombat();
+            HandleTargeting();
+            HandleAutoAttack();
             HandleConsumables();
         }
 
@@ -78,23 +82,64 @@ namespace MiniMMORPG
             }
         }
 
-        private void HandleCombat()
+        private void HandleTargeting()
         {
-            _attackCooldown -= Time.deltaTime;
-            if (!Input.GetMouseButtonDown(0) || _attackCooldown > 0f)
+            if (!Input.GetMouseButtonDown(0))
             {
                 return;
             }
 
-            _attackCooldown = 0.5f;
-            if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out var hit, 100f))
+            if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out var hit, 100f))
             {
-                var enemy = hit.collider.GetComponentInParent<EnemyCharacter>();
-                if (enemy != null && Vector3.Distance(transform.position, enemy.transform.position) <= AttackRange)
-                {
-                    enemy.TakeDamage(20f);
-                }
+                CurrentTarget = null;
+                return;
             }
+
+            var enemy = hit.collider.GetComponentInParent<EnemyCharacter>();
+            if (enemy == null)
+            {
+                CurrentTarget = null;
+                return;
+            }
+
+            CurrentTarget = enemy;
+            _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
+        }
+
+        private void HandleAutoAttack()
+        {
+            _attackCooldown -= Time.deltaTime;
+            if (CurrentTarget == null)
+            {
+                return;
+            }
+
+            if (!CurrentTarget.IsAlive)
+            {
+                CurrentTarget = null;
+                return;
+            }
+
+            float distance = Vector3.Distance(transform.position, CurrentTarget.transform.position);
+            if (distance > AttackRange)
+            {
+                return;
+            }
+
+            var toEnemy = CurrentTarget.transform.position - transform.position;
+            toEnemy.y = 0f;
+            if (toEnemy.sqrMagnitude > 0.01f)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(toEnemy), Time.deltaTime * 12f);
+            }
+
+            if (_attackCooldown > 0f)
+            {
+                return;
+            }
+
+            _attackCooldown = AttackPeriod;
+            CurrentTarget.TakeDamage(AttackDamage);
         }
 
         private void HandleConsumables()
@@ -114,32 +159,24 @@ namespace MiniMMORPG
             {
                 Health = MaxHealth;
                 transform.position = new Vector3(0f, 1f, 0f);
+                CurrentTarget = null;
                 _session.ShowLootMessage("Вы погибли и возродились в лагере");
             }
         }
 
-        public void AddXp(int xp)
+        public void AddLevelFromKill()
         {
-            Xp += xp;
-            int need = Level * 100;
-            while (Xp >= need)
-            {
-                Xp -= need;
-                Level++;
-                MaxHealth += 20f;
-                Health = MaxHealth;
-                need = Level * 100;
-                _session.ShowLootMessage($"Новый уровень: {Level}");
-            }
+            Level++;
+            MaxHealth += 20f;
+            Health = MaxHealth;
+            Xp = 0;
+            _session.ShowLootMessage($"Новый уровень: {Level} (+20 к макс. HP)");
         }
 
         public void AddGold(int amount) => Gold += amount;
 
         public void AddPotion(int amount) => Potions += amount;
 
-        public float XpProgress01()
-        {
-            return Mathf.Clamp01(Xp / (float)(Level * 100));
-        }
+        public float XpProgress01() => 0f;
     }
 }

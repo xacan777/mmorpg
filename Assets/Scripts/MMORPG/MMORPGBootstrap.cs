@@ -93,11 +93,11 @@ namespace MiniMMORPG
             RenderSettings.ambientLight = new Color(0.52f, 0.52f, 0.58f);
         }
 
-        public void AddKillReward(int xp, int gold)
+        public void AddKillReward(int gold)
         {
-            Player.AddXp(xp);
+            Player.AddLevelFromKill();
             Player.AddGold(gold);
-            _hud.ShowMessage($"Убийство! +{xp} XP, +{gold} золота");
+            _hud.ShowMessage($"Убийство! +1 уровень, +{gold} золота");
         }
 
         public void ShowLootMessage(string text)
