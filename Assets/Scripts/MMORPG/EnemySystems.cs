@@ -39,7 +39,7 @@ namespace MiniMMORPG
             enemyObj.name = "Monster";
             enemyObj.transform.position = pos;
             enemyObj.transform.localScale = new Vector3(1.4f, 1.8f, 1.4f);
-            enemyObj.GetComponent<Renderer>().material.color = new Color(0.8f, 0.23f, 0.23f);
+            RuntimeVisuals.ApplyColor(enemyObj.GetComponent<Renderer>(), new Color(0.8f, 0.23f, 0.23f));
 
             var rb = enemyObj.AddComponent<Rigidbody>();
             rb.constraints = RigidbodyConstraints.FreezeRotation;
@@ -144,8 +144,7 @@ namespace MiniMMORPG
             var col = lootObj.GetComponent<SphereCollider>();
             col.isTrigger = true;
 
-            var renderer = lootObj.GetComponent<Renderer>();
-            renderer.material.color = type == LootType.Gold ? new Color(1f, 0.84f, 0.1f) : new Color(0.3f, 0.95f, 0.95f);
+            RuntimeVisuals.ApplyColor(lootObj.GetComponent<Renderer>(), type == LootType.Gold ? new Color(1f, 0.84f, 0.1f) : new Color(0.3f, 0.95f, 0.95f));
 
             var pickup = lootObj.AddComponent<LootPickup>();
             pickup._type = type;

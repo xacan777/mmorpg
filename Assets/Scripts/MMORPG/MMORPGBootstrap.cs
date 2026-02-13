@@ -45,8 +45,7 @@ namespace MiniMMORPG
             ground.name = "Ground";
             ground.transform.position = Vector3.zero;
             ground.transform.localScale = new Vector3(4f, 1f, 4f);
-            var renderer = ground.GetComponent<Renderer>();
-            renderer.material.color = new Color(0.25f, 0.45f, 0.25f);
+            RuntimeVisuals.ApplyColor(ground.GetComponent<Renderer>(), new Color(0.25f, 0.45f, 0.25f));
         }
 
         private void SpawnPlayer()
@@ -54,7 +53,7 @@ namespace MiniMMORPG
             var playerObj = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             playerObj.name = "Player";
             playerObj.transform.position = new Vector3(0f, 1f, 0f);
-            playerObj.GetComponent<Renderer>().material.color = new Color(0.3f, 0.55f, 0.95f);
+            RuntimeVisuals.ApplyColor(playerObj.GetComponent<Renderer>(), new Color(0.3f, 0.55f, 0.95f));
 
             Destroy(playerObj.GetComponent<CapsuleCollider>());
             playerObj.AddComponent<CharacterController>();
