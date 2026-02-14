@@ -24,10 +24,13 @@ namespace MiniMMORPG
         private const float AttackRange = 2.35f;
         private const float AttackPeriod = 0.45f;
         private const float JumpHeight = 1.6f;
+        private const float TurnSpeed = 140f;
 
         private float _verticalVelocity;
         private bool _hasMovePoint;
         private Vector3 _movePoint;
+        private bool _autoRunForward;
+        private Vector3 _planarVelocity;
 
         public void Initialize(GameSession session)
         {
@@ -40,52 +43,66 @@ namespace MiniMMORPG
 
         private void Update()
         {
+            HandleRotationInput();
             HandleTargetingAndMoveClick();
             HandleMovement();
             HandleAutoAttack();
             HandleConsumables();
         }
 
+        private void HandleRotationInput()
+        {
+            if (Keyboard.current == null)
+            {
+                return;
+            }
+
+            float turn = 0f;
+            if (Keyboard.current.leftArrowKey.isPressed)
+            {
+                turn -= 1f;
+            }
+            if (Keyboard.current.rightArrowKey.isPressed)
+            {
+                turn += 1f;
+            }
+
+            if (!Mathf.Approximately(turn, 0f))
+            {
+                transform.Rotate(0f, turn * TurnSpeed * Time.deltaTime, 0f, Space.World);
+            }
+
+            if (Keyboard.current.rKey.wasPressedThisFrame)
+            {
+                _autoRunForward = !_autoRunForward;
+                _session.ShowLootMessage(_autoRunForward ? "Автобег: ВКЛ" : "Автобег: ВЫКЛ");
+            }
+        }
+
         private void HandleMovement()
         {
-            Vector2 moveAxis = ReadMoveInput();
-            var inputDirection = new Vector3(moveAxis.x, 0f, moveAxis.y);
+            Vector3 desiredPlanar = GetManualMovementWorldDirection();
 
-            if (inputDirection.sqrMagnitude > 0.001f)
+            if (desiredPlanar.sqrMagnitude > 0.001f)
             {
                 _hasMovePoint = false;
+                _autoRunForward = false;
             }
             else
             {
-                inputDirection = GetAutoMoveDirection();
+                desiredPlanar = GetAutoMoveDirection();
             }
 
-            if (inputDirection.sqrMagnitude > 1f)
+            if (desiredPlanar.sqrMagnitude > 1f)
             {
-                inputDirection.Normalize();
+                desiredPlanar.Normalize();
             }
 
-            var currentCamera = Camera.main;
-            Vector3 move;
-            if (currentCamera != null)
-            {
-                var camForward = currentCamera.transform.forward;
-                camForward.y = 0f;
-                camForward.Normalize();
-
-                var camRight = currentCamera.transform.right;
-                camRight.y = 0f;
-                camRight.Normalize();
-
-                move = (camForward * inputDirection.z + camRight * inputDirection.x) * Speed;
-            }
-            else
-            {
-                move = inputDirection * Speed;
-            }
+            desiredPlanar *= Speed;
 
             if (_controller.isGrounded)
             {
+                _planarVelocity = desiredPlanar;
                 _verticalVelocity = -1f;
                 if (IsJumpPressed())
                 {
@@ -94,16 +111,68 @@ namespace MiniMMORPG
             }
             else
             {
+                if (desiredPlanar.sqrMagnitude > 0.01f)
+                {
+                    _planarVelocity = Vector3.Lerp(_planarVelocity, desiredPlanar, Time.deltaTime * 2.2f);
+                }
                 _verticalVelocity += Gravity * Time.deltaTime;
             }
 
+            var move = _planarVelocity;
             move.y = _verticalVelocity;
             _controller.Move(move * Time.deltaTime);
 
-            if (inputDirection.sqrMagnitude > 0.01f)
+            Vector3 face = new Vector3(_planarVelocity.x, 0f, _planarVelocity.z);
+            if (face.sqrMagnitude > 0.01f)
             {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(new Vector3(move.x, 0f, move.z)), Time.deltaTime * 12f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(face), Time.deltaTime * 12f);
             }
+        }
+
+        private Vector3 GetManualMovementWorldDirection()
+        {
+            if (Keyboard.current == null)
+            {
+                return Vector3.zero;
+            }
+
+            var cam = Camera.main;
+            Vector3 camForward = cam != null ? cam.transform.forward : Vector3.forward;
+            Vector3 camRight = cam != null ? cam.transform.right : Vector3.right;
+            camForward.y = 0f;
+            camRight.y = 0f;
+            camForward.Normalize();
+            camRight.Normalize();
+
+            Vector3 dir = Vector3.zero;
+
+            if (Keyboard.current.wKey.isPressed)
+            {
+                dir += camForward;
+            }
+            if (Keyboard.current.sKey.isPressed)
+            {
+                dir -= camForward;
+            }
+            if (Keyboard.current.aKey.isPressed)
+            {
+                dir -= camRight;
+            }
+            if (Keyboard.current.dKey.isPressed)
+            {
+                dir += camRight;
+            }
+
+            if (Keyboard.current.upArrowKey.isPressed)
+            {
+                dir += transform.forward;
+            }
+            if (Keyboard.current.downArrowKey.isPressed)
+            {
+                dir -= transform.forward;
+            }
+
+            return dir.normalized;
         }
 
         private Vector3 GetAutoMoveDirection()
@@ -119,6 +188,11 @@ namespace MiniMMORPG
                 }
 
                 return toPoint.normalized;
+            }
+
+            if (_autoRunForward)
+            {
+                return transform.forward;
             }
 
             if (CurrentTarget == null || !CurrentTarget.IsAlive)
@@ -253,22 +327,6 @@ namespace MiniMMORPG
         public float XpProgress01()
         {
             return Mathf.Clamp01(Xp / (float)(Level * 100));
-        }
-
-        private static Vector2 ReadMoveInput()
-        {
-            if (Keyboard.current == null)
-            {
-                return Vector2.zero;
-            }
-
-            float horizontal = (Keyboard.current.dKey.isPressed ? 1f : 0f) - (Keyboard.current.aKey.isPressed ? 1f : 0f);
-            float vertical = (Keyboard.current.wKey.isPressed ? 1f : 0f) - (Keyboard.current.sKey.isPressed ? 1f : 0f);
-
-            horizontal += (Keyboard.current.rightArrowKey.isPressed ? 1f : 0f) - (Keyboard.current.leftArrowKey.isPressed ? 1f : 0f);
-            vertical += (Keyboard.current.upArrowKey.isPressed ? 1f : 0f) - (Keyboard.current.downArrowKey.isPressed ? 1f : 0f);
-
-            return new Vector2(Mathf.Clamp(horizontal, -1f, 1f), Mathf.Clamp(vertical, -1f, 1f));
         }
 
         private static bool IsLeftClickPressed()

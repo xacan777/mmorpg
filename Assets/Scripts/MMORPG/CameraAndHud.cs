@@ -94,9 +94,10 @@ namespace MiniMMORPG
                 GUI.HorizontalScrollbar(new Rect(Screen.width / 2f - 155f, 38f, 310f, 16f), 0f, Mathf.Clamp01(t.Health / t.MaxHealth), 0f, 1f);
             }
 
-            GUI.Box(new Rect(Screen.width - 430, 10, 420, 95), "Управление");
-            GUI.Label(new Rect(Screen.width - 420, 40, 410, 20), "ЛКМ: цель/идти в точку, ПКМ+мышь: вращать камеру");
-            GUI.Label(new Rect(Screen.width - 420, 60, 410, 20), "WASD: движение, Space: прыжок, 1: зелье");
+            GUI.Box(new Rect(Screen.width - 460, 10, 450, 110), "Управление");
+            GUI.Label(new Rect(Screen.width - 450, 40, 440, 20), "ЛКМ: цель/идти в точку, ПКМ+мышь: вращать камеру");
+            GUI.Label(new Rect(Screen.width - 450, 60, 440, 20), "WASD: движение, стрелки ←/→: поворот, Space: прыжок");
+            GUI.Label(new Rect(Screen.width - 450, 80, 440, 20), "R: автобег вперёд, 1: зелье");
 
             if (_messageTime > 0f)
             {

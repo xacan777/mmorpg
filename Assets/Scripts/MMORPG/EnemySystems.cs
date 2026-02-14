@@ -6,38 +6,49 @@ namespace MiniMMORPG
     public class EnemySpawner : MonoBehaviour
     {
         private Transform _player;
+        private Vector3 _origin;
 
-        private const int InitialEnemies = 1;
         private const float RespawnDelay = 5f;
-        private const float SpawnAreaHalfSize = 18f;
+
+        private static readonly Vector3[] SpawnOffsets =
+        {
+            new Vector3(10f, 0f, 8f),
+            new Vector3(-12f, 0f, 10f),
+            new Vector3(16f, 0f, -6f),
+            new Vector3(-14f, 0f, -12f),
+            new Vector3(4f, 0f, -18f)
+        };
 
         public void Initialize(Transform player)
         {
             _player = player;
-            for (int i = 0; i < InitialEnemies; i++)
+            _origin = player.position;
+
+            for (int i = 0; i < SpawnOffsets.Length; i++)
             {
-                SpawnEnemy();
+                SpawnEnemy(i);
             }
         }
 
-        public void ScheduleRespawn()
+        public void ScheduleRespawn(int spawnIndex)
         {
-            StartCoroutine(RespawnRoutine());
+            StartCoroutine(RespawnRoutine(spawnIndex));
         }
 
-        private IEnumerator RespawnRoutine()
+        private IEnumerator RespawnRoutine(int spawnIndex)
         {
             yield return new WaitForSeconds(RespawnDelay);
-            SpawnEnemy();
+            SpawnEnemy(spawnIndex);
         }
 
-        private void SpawnEnemy()
+        private void SpawnEnemy(int spawnIndex)
         {
-            var pos = new Vector3(Random.Range(-SpawnAreaHalfSize, SpawnAreaHalfSize), 1f, Random.Range(-SpawnAreaHalfSize, SpawnAreaHalfSize));
+            Vector3 spawn = _origin + SpawnOffsets[spawnIndex % SpawnOffsets.Length];
+            spawn.y = ResolveGroundY(spawn) + 1f;
 
             var enemyObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            enemyObj.name = "Monster";
-            enemyObj.transform.position = pos;
+            enemyObj.name = $"Monster_{spawnIndex + 1}";
+            enemyObj.transform.position = spawn;
             enemyObj.transform.localScale = new Vector3(1.4f, 1.8f, 1.4f);
             RuntimeVisuals.ApplyColor(enemyObj.GetComponent<Renderer>(), new Color(0.8f, 0.23f, 0.23f));
 
@@ -46,7 +57,17 @@ namespace MiniMMORPG
             rb.mass = 100f;
 
             var enemy = enemyObj.AddComponent<EnemyCharacter>();
-            enemy.Initialize(_player, this);
+            enemy.Initialize(_player, this, spawnIndex);
+        }
+
+        private static float ResolveGroundY(Vector3 world)
+        {
+            if (Terrain.activeTerrain != null)
+            {
+                return Terrain.activeTerrain.SampleHeight(world);
+            }
+
+            return 0f;
         }
     }
 
@@ -60,13 +81,17 @@ namespace MiniMMORPG
         private Transform _player;
         private Rigidbody _rb;
         private EnemySpawner _spawner;
+        private int _spawnIndex;
 
         private float _attackCooldown;
 
-        public void Initialize(Transform player, EnemySpawner spawner)
+        private const float AggroRadius = 11f;
+
+        public void Initialize(Transform player, EnemySpawner spawner, int spawnIndex)
         {
             _player = player;
             _spawner = spawner;
+            _spawnIndex = spawnIndex;
             _rb = GetComponent<Rigidbody>();
             MaxHealth = 15f;
             Health = 15f;
@@ -82,9 +107,15 @@ namespace MiniMMORPG
             var toPlayer = _player.position - transform.position;
             float distance = toPlayer.magnitude;
 
+            if (distance > AggroRadius)
+            {
+                _rb.velocity = new Vector3(0f, _rb.velocity.y, 0f);
+                return;
+            }
+
             if (distance > 1.7f)
             {
-                var velocity = toPlayer.normalized * 2.6f;
+                var velocity = toPlayer.normalized * 2.8f;
                 velocity.y = _rb.velocity.y;
                 _rb.velocity = velocity;
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(new Vector3(velocity.x, 0f, velocity.z)), Time.fixedDeltaTime * 8f);
@@ -152,7 +183,7 @@ namespace MiniMMORPG
             LootPickup.Spawn(transform.position + new Vector3(0.4f, 0.25f, 0f), LootType.Gold, gold);
             LootPickup.Spawn(transform.position + new Vector3(-0.4f, 0.25f, 0f), LootType.Potion, potionAmount);
 
-            _spawner.ScheduleRespawn();
+            _spawner.ScheduleRespawn(_spawnIndex);
             Destroy(gameObject);
         }
     }
