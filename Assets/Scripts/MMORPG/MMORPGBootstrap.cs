@@ -123,9 +123,26 @@ namespace MiniMMORPG
 
         private void SpawnCamera()
         {
-            var cameraObj = Camera.main != null ? Camera.main.gameObject : new GameObject("Main Camera");
+            var main = Camera.main;
+            Camera camera = main != null ? main : FindObjectOfType<Camera>(true);
+
+            GameObject cameraObj;
+            if (camera != null)
+            {
+                cameraObj = camera.gameObject;
+                if (!cameraObj.activeSelf)
+                {
+                    cameraObj.SetActive(true);
+                }
+                camera.enabled = true;
+            }
+            else
+            {
+                cameraObj = new GameObject("Main Camera");
+                camera = cameraObj.AddComponent<Camera>();
+            }
+
             cameraObj.tag = "MainCamera";
-            var camera = cameraObj.GetComponent<Camera>() ?? cameraObj.AddComponent<Camera>();
             camera.fieldOfView = 68f;
 
             if (cameraObj.GetComponent<AudioListener>() == null)
