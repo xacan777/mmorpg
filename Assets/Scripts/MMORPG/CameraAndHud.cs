@@ -1,17 +1,19 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MiniMMORPG
 {
     public class CameraFollow : MonoBehaviour
     {
         private Transform _target;
-        private Vector3 _offset = new Vector3(0f, 8f, -8f);
+        private float _distance = 11f;
+        private float _yaw = 135f;
+        private float _pitch = 32f;
 
         public void Initialize(Transform target)
         {
             _target = target;
-            transform.position = target.position + _offset;
-            transform.LookAt(target.position + Vector3.up * 1.2f);
+            SnapToTarget();
         }
 
         private void LateUpdate()
@@ -21,8 +23,28 @@ namespace MiniMMORPG
                 return;
             }
 
-            transform.position = Vector3.Lerp(transform.position, _target.position + _offset, Time.deltaTime * 6f);
-            transform.LookAt(_target.position + Vector3.up * 1.2f);
+            if (Mouse.current != null && Mouse.current.rightButton.isPressed)
+            {
+                Vector2 delta = Mouse.current.delta.ReadValue();
+                _yaw += delta.x * 0.18f;
+                _pitch -= delta.y * 0.12f;
+                _pitch = Mathf.Clamp(_pitch, 12f, 70f);
+            }
+
+            var rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+            var lookPoint = _target.position + Vector3.up * 1.4f;
+            var desiredPos = lookPoint + rotation * new Vector3(0f, 0f, -_distance);
+
+            transform.position = Vector3.Lerp(transform.position, desiredPos, Time.deltaTime * 12f);
+            transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.LookRotation(lookPoint - transform.position), Time.deltaTime * 14f);
+        }
+
+        private void SnapToTarget()
+        {
+            var rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+            var lookPoint = _target.position + Vector3.up * 1.4f;
+            transform.position = lookPoint + rotation * new Vector3(0f, 0f, -_distance);
+            transform.LookAt(lookPoint);
         }
     }
 
@@ -72,9 +94,9 @@ namespace MiniMMORPG
                 GUI.HorizontalScrollbar(new Rect(Screen.width / 2f - 155f, 38f, 310f, 16f), 0f, Mathf.Clamp01(t.Health / t.MaxHealth), 0f, 1f);
             }
 
-            GUI.Box(new Rect(Screen.width - 380, 10, 370, 95), "Управление");
-            GUI.Label(new Rect(Screen.width - 370, 40, 350, 20), "WASD - движение, ЛКМ - атака по монстру");
-            GUI.Label(new Rect(Screen.width - 370, 60, 350, 20), "Подбирайте лут, убивайте монстров, прокачивайтесь");
+            GUI.Box(new Rect(Screen.width - 430, 10, 420, 95), "Управление");
+            GUI.Label(new Rect(Screen.width - 420, 40, 410, 20), "ЛКМ: цель/идти в точку, ПКМ+мышь: вращать камеру");
+            GUI.Label(new Rect(Screen.width - 420, 60, 410, 20), "WASD: движение, Space: прыжок, 1: зелье");
 
             if (_messageTime > 0f)
             {

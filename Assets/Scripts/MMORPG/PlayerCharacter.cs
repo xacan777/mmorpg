@@ -23,8 +23,11 @@ namespace MiniMMORPG
         private const float Gravity = -20f;
         private const float AttackRange = 2.35f;
         private const float AttackPeriod = 0.45f;
+        private const float JumpHeight = 1.6f;
 
         private float _verticalVelocity;
+        private bool _hasMovePoint;
+        private Vector3 _movePoint;
 
         public void Initialize(GameSession session)
         {
@@ -37,8 +40,8 @@ namespace MiniMMORPG
 
         private void Update()
         {
+            HandleTargetingAndMoveClick();
             HandleMovement();
-            HandleTargeting();
             HandleAutoAttack();
             HandleConsumables();
         }
@@ -48,9 +51,13 @@ namespace MiniMMORPG
             Vector2 moveAxis = ReadMoveInput();
             var inputDirection = new Vector3(moveAxis.x, 0f, moveAxis.y);
 
-            if (inputDirection.sqrMagnitude < 0.001f)
+            if (inputDirection.sqrMagnitude > 0.001f)
             {
-                inputDirection = GetAutoChaseInputDirection();
+                _hasMovePoint = false;
+            }
+            else
+            {
+                inputDirection = GetAutoMoveDirection();
             }
 
             if (inputDirection.sqrMagnitude > 1f)
@@ -80,6 +87,10 @@ namespace MiniMMORPG
             if (_controller.isGrounded)
             {
                 _verticalVelocity = -1f;
+                if (IsJumpPressed())
+                {
+                    _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
+                }
             }
             else
             {
@@ -95,8 +106,21 @@ namespace MiniMMORPG
             }
         }
 
-        private Vector3 GetAutoChaseInputDirection()
+        private Vector3 GetAutoMoveDirection()
         {
+            if (_hasMovePoint)
+            {
+                var toPoint = _movePoint - transform.position;
+                toPoint.y = 0f;
+                if (toPoint.sqrMagnitude < 0.6f * 0.6f)
+                {
+                    _hasMovePoint = false;
+                    return Vector3.zero;
+                }
+
+                return toPoint.normalized;
+            }
+
             if (CurrentTarget == null || !CurrentTarget.IsAlive)
             {
                 return Vector3.zero;
@@ -104,7 +128,7 @@ namespace MiniMMORPG
 
             var toEnemy = CurrentTarget.transform.position - transform.position;
             toEnemy.y = 0f;
-            if (toEnemy.sqrMagnitude < AttackRange * AttackRange)
+            if (toEnemy.sqrMagnitude <= AttackRange * AttackRange)
             {
                 return Vector3.zero;
             }
@@ -112,9 +136,9 @@ namespace MiniMMORPG
             return toEnemy.normalized;
         }
 
-        private void HandleTargeting()
+        private void HandleTargetingAndMoveClick()
         {
-            if (!IsAttackPressed())
+            if (!IsLeftClickPressed())
             {
                 return;
             }
@@ -125,19 +149,27 @@ namespace MiniMMORPG
                 return;
             }
 
-            if (!Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 100f))
+            if (!Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 500f))
             {
                 CurrentTarget = null;
+                _hasMovePoint = false;
                 return;
             }
 
             var enemyByRay = hit.collider.GetComponentInParent<EnemyCharacter>();
-            CurrentTarget = enemyByRay != null && enemyByRay.IsAlive ? enemyByRay : null;
-
-            if (CurrentTarget != null)
+            if (enemyByRay != null && enemyByRay.IsAlive)
             {
+                CurrentTarget = enemyByRay;
+                _movePoint = enemyByRay.transform.position;
+                _hasMovePoint = true;
                 _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
+                return;
             }
+
+            CurrentTarget = null;
+            _movePoint = hit.point;
+            _movePoint.y = transform.position.y;
+            _hasMovePoint = true;
         }
 
         private void HandleAutoAttack()
@@ -194,6 +226,7 @@ namespace MiniMMORPG
                 Health = MaxHealth;
                 transform.position = _session.GetSpawnPosition();
                 CurrentTarget = null;
+                _hasMovePoint = false;
                 _session.ShowLootMessage("Вы погибли и возродились в лагере");
             }
         }
@@ -238,9 +271,14 @@ namespace MiniMMORPG
             return new Vector2(Mathf.Clamp(horizontal, -1f, 1f), Mathf.Clamp(vertical, -1f, 1f));
         }
 
-        private static bool IsAttackPressed()
+        private static bool IsLeftClickPressed()
         {
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+        }
+
+        private static bool IsJumpPressed()
+        {
+            return Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
         }
 
         private static bool IsPotionPressed()
