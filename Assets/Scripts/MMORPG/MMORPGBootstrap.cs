@@ -123,27 +123,30 @@ namespace MiniMMORPG
 
         private void SpawnCamera()
         {
-            var main = Camera.main;
-            Camera camera = main != null ? main : FindObjectOfType<Camera>(true);
-
+            Camera camera = PickUsableSceneCamera();
             GameObject cameraObj;
-            if (camera != null)
-            {
-                cameraObj = camera.gameObject;
-                if (!cameraObj.activeSelf)
-                {
-                    cameraObj.SetActive(true);
-                }
-                camera.enabled = true;
-            }
-            else
+
+            if (camera == null)
             {
                 cameraObj = new GameObject("Main Camera");
                 camera = cameraObj.AddComponent<Camera>();
             }
+            else
+            {
+                cameraObj = camera.gameObject;
+            }
 
             cameraObj.tag = "MainCamera";
+            camera.enabled = true;
             camera.fieldOfView = 68f;
+
+            if (!cameraObj.activeInHierarchy)
+            {
+                cameraObj = new GameObject("Main Camera");
+                camera = cameraObj.AddComponent<Camera>();
+                cameraObj.tag = "MainCamera";
+                camera.fieldOfView = 68f;
+            }
 
             if (cameraObj.GetComponent<AudioListener>() == null)
             {
@@ -152,6 +155,50 @@ namespace MiniMMORPG
 
             var follow = cameraObj.GetComponent<CameraFollow>() ?? cameraObj.AddComponent<CameraFollow>();
             follow.Initialize(Player.transform);
+        }
+
+        private static Camera PickUsableSceneCamera()
+        {
+            Camera main = Camera.main;
+            if (main != null)
+            {
+                return main;
+            }
+
+            Camera[] allCameras = FindObjectsOfType<Camera>(true);
+            Camera fallback = null;
+
+            foreach (var cam in allCameras)
+            {
+                if (cam == null)
+                {
+                    continue;
+                }
+
+                if (cam.gameObject.activeInHierarchy)
+                {
+                    return cam;
+                }
+
+                if (fallback == null)
+                {
+                    fallback = cam;
+                }
+            }
+
+            if (fallback != null)
+            {
+                var root = fallback.transform.root != null ? fallback.transform.root.gameObject : null;
+                if (root != null && root.name == "First Person Controller")
+                {
+                    return null;
+                }
+
+                fallback.gameObject.SetActive(true);
+                return fallback;
+            }
+
+            return null;
         }
 
         private void SpawnLight()
