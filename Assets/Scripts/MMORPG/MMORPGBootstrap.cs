@@ -34,6 +34,7 @@ namespace MiniMMORPG
                 return;
             }
 
+            RemoveLegacyFirstPersonController();
             _spawnPosition = ResolveSpawnPosition();
             SetupWorld();
             SpawnPlayer();
@@ -50,6 +51,15 @@ namespace MiniMMORPG
         }
 
         public Vector3 GetSpawnPosition() => _spawnPosition;
+
+        private static void RemoveLegacyFirstPersonController()
+        {
+            var legacy = GameObject.Find("First Person Controller");
+            if (legacy != null)
+            {
+                legacy.SetActive(false);
+            }
+        }
 
         private Vector3 ResolveSpawnPosition()
         {
