@@ -97,18 +97,20 @@ namespace MiniMMORPG
             }
 
             var currentCamera = Camera.main;
-            if (currentCamera != null && Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 100f))
+            if (currentCamera == null)
             {
-                var enemyByRay = hit.collider.GetComponentInParent<EnemyCharacter>();
-                if (enemyByRay != null)
-                {
-                    CurrentTarget = enemyByRay;
-                    _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
-                    return;
-                }
+                return;
             }
 
-            CurrentTarget = FindNearestAliveEnemy();
+            if (!Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 100f))
+            {
+                CurrentTarget = null;
+                return;
+            }
+
+            var enemyByRay = hit.collider.GetComponentInParent<EnemyCharacter>();
+            CurrentTarget = enemyByRay != null && enemyByRay.IsAlive ? enemyByRay : null;
+
             if (CurrentTarget != null)
             {
                 _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
@@ -151,30 +153,6 @@ namespace MiniMMORPG
             CurrentTarget.TakeDamage(Random.Range(1f, 5.1f));
         }
 
-        private EnemyCharacter FindNearestAliveEnemy()
-        {
-            var enemies = FindObjectsOfType<EnemyCharacter>();
-            EnemyCharacter nearest = null;
-            float nearestDist = float.MaxValue;
-
-            foreach (var enemy in enemies)
-            {
-                if (!enemy.IsAlive)
-                {
-                    continue;
-                }
-
-                float dist = Vector3.Distance(transform.position, enemy.transform.position);
-                if (dist < nearestDist)
-                {
-                    nearest = enemy;
-                    nearestDist = dist;
-                }
-            }
-
-            return nearest;
-        }
-
         private void HandleConsumables()
         {
             if (IsPotionPressed() && Potions > 0 && Health < MaxHealth)
@@ -197,20 +175,29 @@ namespace MiniMMORPG
             }
         }
 
-        public void AddLevelFromKill()
+        public void AddXp(int amount)
         {
-            Level++;
-            MaxHealth += 20f;
-            Health = MaxHealth;
-            Xp = 0;
-            _session.ShowLootMessage($"Новый уровень: {Level} (+20 к макс. HP)");
+            Xp += amount;
+            int need = Level * 100;
+            while (Xp >= need)
+            {
+                Xp -= need;
+                Level++;
+                MaxHealth += 20f;
+                Health = MaxHealth;
+                _session.ShowLootMessage($"Новый уровень: {Level} (+20 к макс. HP)");
+                need = Level * 100;
+            }
         }
 
         public void AddGold(int amount) => Gold += amount;
 
         public void AddPotion(int amount) => Potions += amount;
 
-        public float XpProgress01() => 0f;
+        public float XpProgress01()
+        {
+            return Mathf.Clamp01(Xp / (float)(Level * 100));
+        }
 
         private static Vector2 ReadMoveInput()
         {

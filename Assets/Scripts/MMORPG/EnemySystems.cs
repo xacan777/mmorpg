@@ -9,6 +9,7 @@ namespace MiniMMORPG
 
         private const int InitialEnemies = 1;
         private const float RespawnDelay = 5f;
+        private const float SpawnAreaHalfSize = 18f;
 
         public void Initialize(Transform player)
         {
@@ -32,8 +33,7 @@ namespace MiniMMORPG
 
         private void SpawnEnemy()
         {
-            Vector2 circle = Random.insideUnitCircle * Random.Range(8f, 30f);
-            var pos = new Vector3(circle.x, 1f, circle.y);
+            var pos = new Vector3(Random.Range(-SpawnAreaHalfSize, SpawnAreaHalfSize), 1f, Random.Range(-SpawnAreaHalfSize, SpawnAreaHalfSize));
 
             var enemyObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
             enemyObj.name = "Monster";
@@ -143,16 +143,15 @@ namespace MiniMMORPG
         private void Die()
         {
             var session = FindObjectOfType<GameSession>();
-            int gold = Random.Range(3, 12);
-            session.AddKillReward(gold);
+            int xp = Random.Range(35, 55);
+            session.AddKillReward(xp);
 
-            int potionDropChance = Random.Range(0, 100);
-            if (potionDropChance < 35)
-            {
-                LootPickup.Spawn(transform.position + Vector3.up * 0.35f, LootType.Potion, 1);
-            }
+            int gold = Random.Range(3, 12);
+            int potionAmount = 1;
 
             LootPickup.Spawn(transform.position + new Vector3(0.4f, 0.25f, 0f), LootType.Gold, gold);
+            LootPickup.Spawn(transform.position + new Vector3(-0.4f, 0.25f, 0f), LootType.Potion, potionAmount);
+
             _spawner.ScheduleRespawn();
             Destroy(gameObject);
         }

@@ -59,7 +59,8 @@ namespace MiniMMORPG
             GUI.Box(new Rect(10, 10, 300, 125), "Персонаж");
             GUI.Label(new Rect(20, 40, 280, 20), $"HP: {player.Health:0}/{player.MaxHealth:0}");
             GUI.HorizontalScrollbar(new Rect(20, 62, 220, 18), 0f, player.Health / player.MaxHealth, 0f, 1f);
-            GUI.Label(new Rect(20, 82, 280, 20), $"LVL: {player.Level}  (уровень за каждого монстра)");
+            GUI.Label(new Rect(20, 82, 280, 20), $"LVL: {player.Level}  XP: {player.Xp}/{player.Level * 100}");
+            GUI.HorizontalScrollbar(new Rect(20, 102, 220, 18), 0f, player.XpProgress01(), 0f, 1f);
 
             GUI.Box(new Rect(10, 145, 300, 80), "Инвентарь");
             GUI.Label(new Rect(20, 175, 280, 20), $"Золото: {player.Gold}   Зелья (клавиша 1): {player.Potions}");
