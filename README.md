@@ -54,6 +54,7 @@
 5. Подгони коллайдер/высоту `CharacterController` под рост модели.
 6. Для URP при розовом материале назначь `Universal Render Pipeline/Lit` и обнови материалы через `Edit -> Render Pipeline -> Universal Render Pipeline -> Upgrade Project Materials`.
 7. Проверь, что слой/коллайдеры монстров доступны для raycast (ЛКМ-таргет).
+8. На визуальной модели добавь `Animator` с назначенным `Runtime Animator Controller`; для автоматической анимации движения используй параметры `Speed` (float 0..1), `Grounded` (bool), `Attack` (trigger).
 
 
 ## Стартовая позиция игрока

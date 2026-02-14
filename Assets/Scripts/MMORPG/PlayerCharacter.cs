@@ -31,6 +31,12 @@ namespace MiniMMORPG
         private Vector3 _movePoint;
         private bool _autoRunForward;
         private Vector3 _planarVelocity;
+        private Animator _animator;
+        private bool _animatorWarningShown;
+
+        private static readonly int AnimSpeedHash = Animator.StringToHash("Speed");
+        private static readonly int AnimGroundedHash = Animator.StringToHash("Grounded");
+        private static readonly int AnimAttackHash = Animator.StringToHash("Attack");
 
         public void Initialize(GameSession session)
         {
@@ -39,6 +45,13 @@ namespace MiniMMORPG
             _controller.height = 2f;
             _controller.radius = 0.45f;
             _controller.center = new Vector3(0f, 1f, 0f);
+
+            _animator = GetComponentInChildren<Animator>();
+            if (_animator != null && _animator.runtimeAnimatorController == null && !_animatorWarningShown)
+            {
+                _animatorWarningShown = true;
+                _session.ShowLootMessage("Animator найден, но не назначен Controller (Idle/Run/Attack)");
+            }
         }
 
         private void Update()
@@ -48,6 +61,7 @@ namespace MiniMMORPG
             HandleMovement();
             HandleAutoAttack();
             HandleConsumables();
+            UpdateAnimatorState();
         }
 
         private void HandleRotationInput()
@@ -293,7 +307,24 @@ namespace MiniMMORPG
             }
 
             _attackCooldown = AttackPeriod;
+            _animator?.SetTrigger(AnimAttackHash);
             CurrentTarget.TakeDamage(Random.Range(1f, 5.1f));
+        }
+
+        private void UpdateAnimatorState()
+        {
+            if (_animator == null)
+            {
+                _animator = GetComponentInChildren<Animator>();
+                if (_animator == null)
+                {
+                    return;
+                }
+            }
+
+            float speed01 = Mathf.Clamp01(new Vector3(_planarVelocity.x, 0f, _planarVelocity.z).magnitude / Speed);
+            _animator.SetFloat(AnimSpeedHash, speed01, 0.1f, Time.deltaTime);
+            _animator.SetBool(AnimGroundedHash, _controller.isGrounded);
         }
 
         private void HandleConsumables()
