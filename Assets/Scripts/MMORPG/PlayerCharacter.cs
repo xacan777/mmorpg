@@ -192,7 +192,7 @@ namespace MiniMMORPG
             if (Health <= 0f)
             {
                 Health = MaxHealth;
-                transform.position = new Vector3(0f, 1f, 0f);
+                transform.position = _session.GetSpawnPosition();
                 CurrentTarget = null;
                 _session.ShowLootMessage("Вы погибли и возродились в лагере");
             }

@@ -48,3 +48,10 @@
 5. Подгони коллайдер/высоту `CharacterController` под рост модели.
 6. Для URP при розовом материале назначь `Universal Render Pipeline/Lit` и обнови материалы через `Edit -> Render Pipeline -> Universal Render Pipeline -> Upgrade Project Materials`.
 7. Проверь, что слой/коллайдеры монстров доступны для raycast (ЛКМ-таргет).
+
+
+## Стартовая позиция игрока
+
+- Создай в сцене пустой объект с именем `SpawnPoint` и поставь его в нужную точку.
+- При старте и после смерти игрок будет появляться в позиции `SpawnPoint`.
+- Если `SpawnPoint` отсутствует, берётся позиция активного Terrain (или fallback в `0,1,0`).

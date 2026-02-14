@@ -7,14 +7,14 @@ namespace MiniMMORPG
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void BuildGame()
         {
-            if (FindObjectOfType<GameSession>() != null)
+            var session = FindObjectOfType<GameSession>();
+            if (session == null)
             {
-                return;
+                var sessionObject = new GameObject("MMORPGSession");
+                session = sessionObject.AddComponent<GameSession>();
             }
 
-            var sessionObject = new GameObject("MMORPGSession");
-            var session = sessionObject.AddComponent<GameSession>();
-            session.Initialize();
+            session.InitializeIfNeeded();
         }
     }
 
@@ -24,23 +24,59 @@ namespace MiniMMORPG
 
         private EnemySpawner _spawner;
         private MMORPGHud _hud;
+        private bool _isInitialized;
+        private Vector3 _spawnPosition = new Vector3(0f, 1f, 0f);
 
-        public void Initialize()
+        public void InitializeIfNeeded()
         {
+            if (_isInitialized && Player != null)
+            {
+                return;
+            }
+
+            _spawnPosition = ResolveSpawnPosition();
             SetupWorld();
             SpawnPlayer();
             SpawnCamera();
             SpawnLight();
 
-            _spawner = gameObject.AddComponent<EnemySpawner>();
+            _spawner = GetComponent<EnemySpawner>() ?? gameObject.AddComponent<EnemySpawner>();
             _spawner.Initialize(Player.transform);
 
-            _hud = gameObject.AddComponent<MMORPGHud>();
+            _hud = GetComponent<MMORPGHud>() ?? gameObject.AddComponent<MMORPGHud>();
             _hud.Initialize(this);
+
+            _isInitialized = true;
+        }
+
+        public Vector3 GetSpawnPosition() => _spawnPosition;
+
+        private Vector3 ResolveSpawnPosition()
+        {
+            var marker = GameObject.Find("SpawnPoint");
+            if (marker != null)
+            {
+                return marker.transform.position;
+            }
+
+            var terrain = Terrain.activeTerrain;
+            if (terrain != null)
+            {
+                var pos = terrain.transform.position;
+                float y = terrain.SampleHeight(pos) + 1f;
+                return new Vector3(pos.x, y, pos.z);
+            }
+
+            return new Vector3(0f, 1f, 0f);
         }
 
         private void SetupWorld()
         {
+            if (Terrain.activeTerrain != null || GameObject.Find("Ground") != null)
+            {
+                return;
+            }
+
             var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
             ground.name = "Ground";
             ground.transform.position = Vector3.zero;
@@ -50,9 +86,22 @@ namespace MiniMMORPG
 
         private void SpawnPlayer()
         {
+            if (Player != null)
+            {
+                return;
+            }
+
+            var existing = FindObjectOfType<PlayerCharacter>();
+            if (existing != null)
+            {
+                Player = existing;
+                Player.Initialize(this);
+                return;
+            }
+
             var playerObj = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             playerObj.name = "Player";
-            playerObj.transform.position = new Vector3(0f, 1f, 0f);
+            playerObj.transform.position = _spawnPosition;
             RuntimeVisuals.ApplyColor(playerObj.GetComponent<Renderer>(), new Color(0.3f, 0.55f, 0.95f));
 
             Destroy(playerObj.GetComponent<CapsuleCollider>());
