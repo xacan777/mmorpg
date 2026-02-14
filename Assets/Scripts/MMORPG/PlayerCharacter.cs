@@ -99,26 +99,22 @@ namespace MiniMMORPG
             }
 
             var currentCamera = Camera.main;
-            if (currentCamera == null)
+            if (currentCamera != null && Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 100f))
             {
-                return;
+                var enemyByRay = hit.collider.GetComponentInParent<EnemyCharacter>();
+                if (enemyByRay != null)
+                {
+                    CurrentTarget = enemyByRay;
+                    _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
+                    return;
+                }
             }
 
-            if (!Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 100f))
+            CurrentTarget = FindNearestAliveEnemy();
+            if (CurrentTarget != null)
             {
-                CurrentTarget = null;
-                return;
+                _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
             }
-
-            var enemy = hit.collider.GetComponentInParent<EnemyCharacter>();
-            if (enemy == null)
-            {
-                CurrentTarget = null;
-                return;
-            }
-
-            CurrentTarget = enemy;
-            _session.ShowLootMessage($"Цель: {CurrentTarget.name}");
         }
 
         private void HandleAutoAttack()
@@ -155,6 +151,30 @@ namespace MiniMMORPG
 
             _attackCooldown = AttackPeriod;
             CurrentTarget.TakeDamage(Random.Range(1f, 5.1f));
+        }
+
+        private EnemyCharacter FindNearestAliveEnemy()
+        {
+            var enemies = FindObjectsOfType<EnemyCharacter>();
+            EnemyCharacter nearest = null;
+            float nearestDist = float.MaxValue;
+
+            foreach (var enemy in enemies)
+            {
+                if (!enemy.IsAlive)
+                {
+                    continue;
+                }
+
+                float dist = Vector3.Distance(transform.position, enemy.transform.position);
+                if (dist < nearestDist)
+                {
+                    nearest = enemy;
+                    nearestDist = dist;
+                }
+            }
+
+            return nearest;
         }
 
         private void HandleConsumables()
@@ -196,8 +216,11 @@ namespace MiniMMORPG
 
         private static Vector2 ReadMoveInput()
         {
-            float horizontal = Input.GetAxisRaw("Horizontal");
-            float vertical = Input.GetAxisRaw("Vertical");
+            float horizontal = (Input.GetKey(KeyCode.D) ? 1f : 0f) - (Input.GetKey(KeyCode.A) ? 1f : 0f);
+            float vertical = (Input.GetKey(KeyCode.W) ? 1f : 0f) - (Input.GetKey(KeyCode.S) ? 1f : 0f);
+
+            horizontal += (Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
+            vertical += (Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
 
 #if ENABLE_INPUT_SYSTEM
             if (Mathf.Approximately(horizontal, 0f) && Mathf.Approximately(vertical, 0f) && Keyboard.current != null)
@@ -206,7 +229,7 @@ namespace MiniMMORPG
                 vertical = (Keyboard.current.wKey.isPressed ? 1f : 0f) - (Keyboard.current.sKey.isPressed ? 1f : 0f);
             }
 #endif
-            return new Vector2(horizontal, vertical);
+            return new Vector2(Mathf.Clamp(horizontal, -1f, 1f), Mathf.Clamp(vertical, -1f, 1f));
         }
 
         private static bool IsAttackPressed()

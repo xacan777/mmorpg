@@ -7,7 +7,7 @@ namespace MiniMMORPG
     {
         private Transform _player;
 
-        private const int InitialEnemies = 5;
+        private const int InitialEnemies = 1;
         private const float RespawnDelay = 5f;
 
         public void Initialize(Transform player)
@@ -115,10 +115,15 @@ namespace MiniMMORPG
                 return;
             }
 
-            float x = screen.x - 35f;
+            float x = screen.x - 40f;
             float y = Screen.height - screen.y;
-            GUI.Box(new Rect(x, y, 70f, 8f), GUIContent.none);
-            GUI.Box(new Rect(x, y, Mathf.Clamp(Health / MaxHealth, 0f, 1f) * 70f, 8f), GUIContent.none);
+
+            GUI.color = Color.black;
+            GUI.DrawTexture(new Rect(x, y, 80f, 10f), Texture2D.whiteTexture);
+            GUI.color = Color.red;
+            GUI.DrawTexture(new Rect(x + 1f, y + 1f, Mathf.Clamp(Health / MaxHealth, 0f, 1f) * 78f, 8f), Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(new Rect(x - 2f, y - 17f, 100f, 18f), $"HP {Health:0}/{MaxHealth:0}");
         }
 
         public void TakeDamage(float damage)
