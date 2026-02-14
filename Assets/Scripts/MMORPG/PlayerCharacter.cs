@@ -47,6 +47,12 @@ namespace MiniMMORPG
         {
             Vector2 moveAxis = ReadMoveInput();
             var inputDirection = new Vector3(moveAxis.x, 0f, moveAxis.y);
+
+            if (inputDirection.sqrMagnitude < 0.001f)
+            {
+                inputDirection = GetAutoChaseInputDirection();
+            }
+
             if (inputDirection.sqrMagnitude > 1f)
             {
                 inputDirection.Normalize();
@@ -87,6 +93,23 @@ namespace MiniMMORPG
             {
                 transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(new Vector3(move.x, 0f, move.z)), Time.deltaTime * 12f);
             }
+        }
+
+        private Vector3 GetAutoChaseInputDirection()
+        {
+            if (CurrentTarget == null || !CurrentTarget.IsAlive)
+            {
+                return Vector3.zero;
+            }
+
+            var toEnemy = CurrentTarget.transform.position - transform.position;
+            toEnemy.y = 0f;
+            if (toEnemy.sqrMagnitude < AttackRange * AttackRange)
+            {
+                return Vector3.zero;
+            }
+
+            return toEnemy.normalized;
         }
 
         private void HandleTargeting()

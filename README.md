@@ -29,3 +29,22 @@
 - перевести UI на Canvas-based интерфейс,
 - оптимизировать спавн и эффекты под мобильные устройства,
 - добавить сетевой слой (Photon/Mirror/Netcode for GameObjects).
+
+## Где взять ландшафт и модель персонажа
+
+Подходящие источники:
+
+- Unity Asset Store (бесплатные пакеты: terrain/characters/animations)
+- Kenney (бесплатные ассеты)
+- Quaternius (бесплатные 3D-паки)
+- Mixamo (персонаж + анимации)
+
+## Как добавить нормальный ландшафт и персонажа
+
+1. Импортируй пакет ландшафта/материалов в `Assets/`.
+2. Создай `Terrain` (`GameObject -> 3D Object -> Terrain`) или поставь готовый mesh-ландшафт.
+3. Для персонажа импортируй модель (FBX/GLB), риг и анимации (Idle/Run/Attack).
+4. На объект игрока добавь визуальную модель как дочерний объект, а `CharacterController` оставь на корневом `Player`.
+5. Подгони коллайдер/высоту `CharacterController` под рост модели.
+6. Для URP при розовом материале назначь `Universal Render Pipeline/Lit` и обнови материалы через `Edit -> Render Pipeline -> Universal Render Pipeline -> Upgrade Project Materials`.
+7. Проверь, что слой/коллайдеры монстров доступны для raycast (ЛКМ-таргет).
