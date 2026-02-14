@@ -1,7 +1,5 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
-#endif
 
 namespace MiniMMORPG
 {
@@ -216,56 +214,33 @@ namespace MiniMMORPG
 
         private static Vector2 ReadMoveInput()
         {
-            float horizontal = (Input.GetKey(KeyCode.D) ? 1f : 0f) - (Input.GetKey(KeyCode.A) ? 1f : 0f);
-            float vertical = (Input.GetKey(KeyCode.W) ? 1f : 0f) - (Input.GetKey(KeyCode.S) ? 1f : 0f);
-
-            horizontal += (Input.GetKey(KeyCode.RightArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.LeftArrow) ? 1f : 0f);
-            vertical += (Input.GetKey(KeyCode.UpArrow) ? 1f : 0f) - (Input.GetKey(KeyCode.DownArrow) ? 1f : 0f);
-
-#if ENABLE_INPUT_SYSTEM
-            if (Mathf.Approximately(horizontal, 0f) && Mathf.Approximately(vertical, 0f) && Keyboard.current != null)
+            if (Keyboard.current == null)
             {
-                horizontal = (Keyboard.current.dKey.isPressed ? 1f : 0f) - (Keyboard.current.aKey.isPressed ? 1f : 0f);
-                vertical = (Keyboard.current.wKey.isPressed ? 1f : 0f) - (Keyboard.current.sKey.isPressed ? 1f : 0f);
+                return Vector2.zero;
             }
-#endif
+
+            float horizontal = (Keyboard.current.dKey.isPressed ? 1f : 0f) - (Keyboard.current.aKey.isPressed ? 1f : 0f);
+            float vertical = (Keyboard.current.wKey.isPressed ? 1f : 0f) - (Keyboard.current.sKey.isPressed ? 1f : 0f);
+
+            horizontal += (Keyboard.current.rightArrowKey.isPressed ? 1f : 0f) - (Keyboard.current.leftArrowKey.isPressed ? 1f : 0f);
+            vertical += (Keyboard.current.upArrowKey.isPressed ? 1f : 0f) - (Keyboard.current.downArrowKey.isPressed ? 1f : 0f);
+
             return new Vector2(Mathf.Clamp(horizontal, -1f, 1f), Mathf.Clamp(vertical, -1f, 1f));
         }
 
         private static bool IsAttackPressed()
         {
-            bool oldInput = Input.GetMouseButtonDown(0);
-#if ENABLE_INPUT_SYSTEM
-            if (!oldInput && Mouse.current != null)
-            {
-                return Mouse.current.leftButton.wasPressedThisFrame;
-            }
-#endif
-            return oldInput;
+            return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
         }
 
         private static bool IsPotionPressed()
         {
-            bool oldInput = Input.GetKeyDown(KeyCode.Alpha1);
-#if ENABLE_INPUT_SYSTEM
-            if (!oldInput && Keyboard.current != null)
-            {
-                return Keyboard.current.digit1Key.wasPressedThisFrame;
-            }
-#endif
-            return oldInput;
+            return Keyboard.current != null && Keyboard.current.digit1Key.wasPressedThisFrame;
         }
 
         private static Vector2 ReadPointerPosition()
         {
-            Vector2 oldPosition = Input.mousePosition;
-#if ENABLE_INPUT_SYSTEM
-            if (Mouse.current != null)
-            {
-                return Mouse.current.position.ReadValue();
-            }
-#endif
-            return oldPosition;
+            return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
         }
     }
 }

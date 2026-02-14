@@ -15,8 +15,9 @@
 ## Как запустить
 
 1. Открой проект в Unity (версия из `ProjectSettings/ProjectVersion.txt`).
-2. Открой сцену `Assets/Scenes/SampleScene.unity`.
-3. Нажми `Play`.
+2. Убедись, что в Player Settings включён New Input System (в проекте уже настроено `activeInputHandler: 1`).
+3. Открой сцену `Assets/Scenes/SampleScene.unity`.
+4. Нажми `Play`.
 
 Сцена инициализируется автоматически скриптом `MMORPGBootstrap`.
 
