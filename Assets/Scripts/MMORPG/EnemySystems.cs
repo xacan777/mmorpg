@@ -68,8 +68,8 @@ namespace MiniMMORPG
             _player = player;
             _spawner = spawner;
             _rb = GetComponent<Rigidbody>();
-            MaxHealth = Random.Range(70f, 100f);
-            Health = MaxHealth;
+            MaxHealth = 15f;
+            Health = 15f;
         }
 
         private void FixedUpdate()

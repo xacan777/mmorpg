@@ -1,4 +1,7 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 namespace MiniMMORPG
 {
@@ -22,7 +25,6 @@ namespace MiniMMORPG
         private const float Gravity = -20f;
         private const float AttackRange = 2.35f;
         private const float AttackPeriod = 0.45f;
-        private const float AttackDamage = 15f;
 
         private float _verticalVelocity;
 
@@ -45,24 +47,31 @@ namespace MiniMMORPG
 
         private void HandleMovement()
         {
-            float horizontal = Input.GetAxis("Horizontal");
-            float vertical = Input.GetAxis("Vertical");
-
-            var inputDirection = new Vector3(horizontal, 0f, vertical);
+            Vector2 moveAxis = ReadMoveInput();
+            var inputDirection = new Vector3(moveAxis.x, 0f, moveAxis.y);
             if (inputDirection.sqrMagnitude > 1f)
             {
                 inputDirection.Normalize();
             }
 
-            var camForward = Camera.main.transform.forward;
-            camForward.y = 0f;
-            camForward.Normalize();
+            var currentCamera = Camera.main;
+            Vector3 move;
+            if (currentCamera != null)
+            {
+                var camForward = currentCamera.transform.forward;
+                camForward.y = 0f;
+                camForward.Normalize();
 
-            var camRight = Camera.main.transform.right;
-            camRight.y = 0f;
-            camRight.Normalize();
+                var camRight = currentCamera.transform.right;
+                camRight.y = 0f;
+                camRight.Normalize();
 
-            var move = (camForward * inputDirection.z + camRight * inputDirection.x) * Speed;
+                move = (camForward * inputDirection.z + camRight * inputDirection.x) * Speed;
+            }
+            else
+            {
+                move = inputDirection * Speed;
+            }
 
             if (_controller.isGrounded)
             {
@@ -84,12 +93,18 @@ namespace MiniMMORPG
 
         private void HandleTargeting()
         {
-            if (!Input.GetMouseButtonDown(0))
+            if (!IsAttackPressed())
             {
                 return;
             }
 
-            if (!Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out var hit, 100f))
+            var currentCamera = Camera.main;
+            if (currentCamera == null)
+            {
+                return;
+            }
+
+            if (!Physics.Raycast(currentCamera.ScreenPointToRay(ReadPointerPosition()), out var hit, 100f))
             {
                 CurrentTarget = null;
                 return;
@@ -139,12 +154,12 @@ namespace MiniMMORPG
             }
 
             _attackCooldown = AttackPeriod;
-            CurrentTarget.TakeDamage(AttackDamage);
+            CurrentTarget.TakeDamage(Random.Range(1f, 5.1f));
         }
 
         private void HandleConsumables()
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1) && Potions > 0 && Health < MaxHealth)
+            if (IsPotionPressed() && Potions > 0 && Health < MaxHealth)
             {
                 Potions--;
                 Health = Mathf.Min(MaxHealth, Health + 45f);
@@ -178,5 +193,56 @@ namespace MiniMMORPG
         public void AddPotion(int amount) => Potions += amount;
 
         public float XpProgress01() => 0f;
+
+        private static Vector2 ReadMoveInput()
+        {
+            float horizontal = Input.GetAxisRaw("Horizontal");
+            float vertical = Input.GetAxisRaw("Vertical");
+
+#if ENABLE_INPUT_SYSTEM
+            if (Mathf.Approximately(horizontal, 0f) && Mathf.Approximately(vertical, 0f) && Keyboard.current != null)
+            {
+                horizontal = (Keyboard.current.dKey.isPressed ? 1f : 0f) - (Keyboard.current.aKey.isPressed ? 1f : 0f);
+                vertical = (Keyboard.current.wKey.isPressed ? 1f : 0f) - (Keyboard.current.sKey.isPressed ? 1f : 0f);
+            }
+#endif
+            return new Vector2(horizontal, vertical);
+        }
+
+        private static bool IsAttackPressed()
+        {
+            bool oldInput = Input.GetMouseButtonDown(0);
+#if ENABLE_INPUT_SYSTEM
+            if (!oldInput && Mouse.current != null)
+            {
+                return Mouse.current.leftButton.wasPressedThisFrame;
+            }
+#endif
+            return oldInput;
+        }
+
+        private static bool IsPotionPressed()
+        {
+            bool oldInput = Input.GetKeyDown(KeyCode.Alpha1);
+#if ENABLE_INPUT_SYSTEM
+            if (!oldInput && Keyboard.current != null)
+            {
+                return Keyboard.current.digit1Key.wasPressedThisFrame;
+            }
+#endif
+            return oldInput;
+        }
+
+        private static Vector2 ReadPointerPosition()
+        {
+            Vector2 oldPosition = Input.mousePosition;
+#if ENABLE_INPUT_SYSTEM
+            if (Mouse.current != null)
+            {
+                return Mouse.current.position.ReadValue();
+            }
+#endif
+            return oldPosition;
+        }
     }
 }
